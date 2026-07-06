@@ -1,5 +1,7 @@
 # il-eli-mcp
 
+<!-- mcp-name: io.github.matematicsolutions/il-eli-mcp -->
+
 MCP server for Israeli primary legislation via the Knesset's official
 OData API (`KNS_IsraelLaw` entity set). Tracks each law's name, Knesset
 session, in-force/repealed status, and whether it is a Basic Law (Israel's
