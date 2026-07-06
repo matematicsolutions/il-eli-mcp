@@ -2,6 +2,42 @@
 
 Date: 2026-07-06.
 
+## v0.2.0 - case law + geo-block correction (2026-07-06)
+
+- **Corrected an earlier external claim**: the Knesset OData API
+  (`https://knesset.gov.il/Odata/ParliamentInfo.svc/KNS_IsraelLaw`) was
+  re-verified live and is NOT Israel-IP-only / geo-blocked - a direct
+  `$top=3` query returned real data from outside Israel. `test_smoke.py`
+  (unchanged, pre-existing) continues to pass against the live API,
+  reconfirming this.
+- **Added case law** (previously a documented zero-coverage gap): two new
+  tools, `il_search_case_law` and `il_get_case`, backed by the HuggingFace
+  dataset `guychuk/case-law-israel` (10,558 Hebrew court judgments -
+  Family/District/Magistrate/Labor/Military/Administrative courts, single
+  parquet file, ~80.9MB). This is a genuinely unconventional design choice
+  for this fleet: it is a **static, locally-bundled dataset**, not a live
+  query API, because Israeli court portals were found to be unreliable for
+  live querying elsewhere in the wider audit. The parquet file is downloaded
+  once (via `huggingface_hub`) into the existing cache directory
+  (`~/.matematic/cache/il-eli/case-law-dataset/`, override via
+  `IL_ELI_CACHE_DIR`) and then queried locally with a pandas substring
+  filter - no vector DB, no re-download per call. This fits the zero-cloud
+  philosophy: the data lives on disk, not re-fetched from a cloud API per
+  query.
+- **Startup-safe**: the dataset download is lazy, triggered only on the
+  first `il_search_case_law`/`il_get_case` call, not at server import or
+  boot - tools that only touch `KNS_IsraelLaw` are unaffected.
+- **License caveat - flagged, not resolved**: the dataset card's license
+  field is undocumented ("[More Information Needed]" as of 2026-07-06,
+  re-verified via the HF API metadata endpoint, not just the rendered
+  card). This connector caches the file for MateMatic's own tool use only;
+  it must NOT be redistributed to end users or bundled into any shipped
+  product without a legal review of actual redistribution rights.
+- **No per-judgment public URL**: unlike `KNS_IsraelLaw`'s OData entity
+  URLs, this dataset has no dereferenceable per-case URL - citations point
+  to the HF dataset page with a `judgment_id` fragment, honestly labeled as
+  not an official court URL (see `citations.py::build_case_citation`).
+
 ## Why Israel, and why now
 
 Israel was the only genuinely fresh candidate left after the user asked
