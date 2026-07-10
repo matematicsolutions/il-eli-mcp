@@ -23,3 +23,20 @@ async def test_search_and_get_law() -> None:
         detail = parse_law(detail_raw)
         assert detail.israel_law_id == 2000002
         assert detail.name is not None
+
+
+@pytest.mark.asyncio
+async def test_search_published_laws_and_documents() -> None:
+    async with KnessetClient() as client:
+        # "bchirot" (elections) - known to hit the consolidated Elections Law.
+        items = await client.search_published_laws("בחירות", limit=5)
+        assert len(items) >= 1
+        assert all("LawID" in item for item in items)
+
+        # LawID 2001482 = Knesset Elections Law, consolidated version - has documents.
+        docs = await client.get_law_documents(2001482)
+        assert len(docs) >= 1
+        assert any(
+            (d.get("FilePath") or "").startswith("https://fs.knesset.gov.il")
+            for d in docs
+        )

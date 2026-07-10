@@ -83,3 +83,23 @@ never been probed.
   URL and a human-browsable one). `source_url` in this connector is the
   same OData entity URL as `lex_uri` - honest about the gap rather than
   inventing a page that may not exist or may not resolve reliably.
+
+## v0.3.0 - published law texts via KNS_Law + KNS_DocumentLaw (2026-07-10)
+
+- **The v0.2 "unresolved join" is bypassed, not solved**: `KNS_IsraelLawBinding`
+  turned out to map only law-replacement events (sparse - empty for most
+  IsraelLawIDs probed), so no general `IsraelLawID -> LawID` join exists in the
+  API. Instead of joining, the connector now searches `KNS_Law` directly
+  (`substringof` over `Name`, confirmed live with Hebrew queries), where each
+  row is a published law version - including consolidated texts
+  (`SubTypeDesc` = "nosach meshulav").
+- **`KNS_DocumentLaw` filtered by `LawID` works** and returns official PDF
+  URLs on `fs.knesset.gov.il` - verified live (HTTP 200, `application/pdf`,
+  e.g. `2_lsr_311000.PDF` for LawID 2001482, the consolidated Knesset
+  Elections Law 1955). Two new tools: `il_search_law_texts`,
+  `il_get_law_documents`.
+- **Supreme Court case law recon (parked, no clean path)**: ISCD
+  (iscd.huji.ac.il, 16k+ decisions) times out from this network too, not just
+  from LDH's servers; Versa (Cardozo Law's English translations, ~419
+  opinions) is licensed non-commercial by Yeshiva University - both fail the
+  fleet's gates. The lower-courts corpus remains the only case-law source.

@@ -80,3 +80,19 @@ class KnessetClient:
 
     async def get_law(self, israel_law_id: int) -> dict:
         return await self._get_json(f"/KNS_IsraelLaw({israel_law_id})", {}, category="act")
+
+    async def search_published_laws(self, query: str, limit: int = 20) -> list[dict]:
+        """Search KNS_Law - published law versions, including consolidated texts."""
+        escaped = query.replace("'", "''")
+        params = {"$filter": f"substringof('{escaped}',Name)", "$top": str(limit)}
+        data = await self._get_json("/KNS_Law", params, category="search")
+        return data.get("value", [])
+
+    async def get_published_law(self, law_id: int) -> dict:
+        return await self._get_json(f"/KNS_Law({law_id})", {}, category="act")
+
+    async def get_law_documents(self, law_id: int) -> list[dict]:
+        """Official document files (PDFs on fs.knesset.gov.il) for one KNS_Law row."""
+        params = {"$filter": f"LawID eq {law_id}"}
+        data = await self._get_json("/KNS_DocumentLaw", params, category="act")
+        return data.get("value", [])

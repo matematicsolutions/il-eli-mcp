@@ -23,7 +23,14 @@ from mcp.types import ToolAnnotations
 
 from .audit import AuditLogger, hash_input, timer
 from .case_law import get_case, search_case_law
-from .citations import build_case_citation, build_citation, parse_law
+from .citations import (
+    build_case_citation,
+    build_citation,
+    build_published_law_citation,
+    parse_law,
+    parse_law_document,
+    parse_published_law,
+)
 from .client import DEFAULT_BASE_URL, KnessetClient
 
 INSTRUCTIONS = """\
@@ -31,15 +38,18 @@ This MCP server exposes the Knesset's official OData API (KNS_IsraelLaw entity s
 
 ## Call order
 
-1. `il_search_laws` - full-text search over law names (Hebrew).
+1. `il_search_laws` - full-text search over law names (Hebrew) in the KNS_IsraelLaw registry (in-force status, Basic Law flag).
 2. `il_get_law` - full detail for one law by its `israel_law_id` (from the search results).
-3. `il_search_case_law` - keyword search over a LOCAL, pre-downloaded corpus of 10,558 Hebrew court judgments (Family/District/Magistrate/Labor/Military/Administrative courts). Unlike the tools above, this is NOT a live API call - the first invocation downloads a ~81MB dataset snapshot once and caches it; subsequent calls query the local cache only.
-4. `il_get_case` - full detail (including full judgment text) for one case by its `judgment_id` (from the case-law search results).
+3. `il_search_law_texts` - search PUBLISHED law versions (KNS_Law), including consolidated texts ("nosach meshulav"). Returns `law_id` - a different id space than `israel_law_id`; the two registries are not joined (see hard constraints).
+4. `il_get_law_documents` - the official document files for one published law by `law_id`: PDFs hosted on fs.knesset.gov.il, i.e. the actual operative text.
+5. `il_search_case_law` - keyword search over a LOCAL, pre-downloaded corpus of 10,558 Hebrew court judgments (Family/District/Magistrate/Labor/Military/Administrative courts). Unlike the tools above, this is NOT a live API call - the first invocation downloads a ~81MB dataset snapshot once and caches it; subsequent calls query the local cache only.
+6. `il_get_case` - full detail (including full judgment text) for one case by its `judgment_id` (from the case-law search results).
 
 ## Hard constraints
 
 - **Hebrew text** - law names and case text are in Hebrew; search queries should be in Hebrew too.
-- **No full-text law content for legislation** - `il_search_laws`/`il_get_law` return metadata (name, Knesset session, validity status, is-Basic-Law flag), not the operative articles. The Knesset also exposes a separate `KNS_DocumentLaw` entity with PDF links, but its identifier does not map directly to `IsraelLawID` - not resolved by this connector (see DISCOVERY.md).
+- **Two disjoint legislation id spaces** - `israel_law_id` (KNS_IsraelLaw registry: status, Basic Law flag) and `law_id` (KNS_Law: published versions with documents). The Knesset exposes no reliable general join between them (KNS_IsraelLawBinding covers replacement events only) - to reach a law's text, search BOTH `il_search_laws` (status) and `il_search_law_texts` (documents) by name.
+- **Law texts arrive as PDF links, not inline text** - `il_get_law_documents` returns official fs.knesset.gov.il PDF URLs; fetching and reading the PDF is the client's job. No Supreme Court coverage in the case-law corpus (lower and specialized courts only).
 - **Case law is a static local dataset, not a live query** - sourced from the HuggingFace dataset `guychuk/case-law-israel`. Its license field is undocumented ("[More Information Needed]") - do not present case-law results as freely redistributable; this data is for MateMatic's own analysis use, not for repackaging into a shipped product without a legal review.
 - **Every legislation response has `human_readable_citation` + `source_url`** - both are the same dereferenceable Knesset OData entity URL, since Israel has no separate public citation identifier scheme for this data.
 - **Case-law responses also have `human_readable_citation` + `source_url`** - since there is no per-judgment deep link in the dataset, `source_url` points to the HuggingFace dataset page (with a `judgment_id` fragment); be honest with the user that this is not an official court URL.
@@ -178,6 +188,105 @@ async def il_get_law(israel_law_id: int) -> dict:
         raise ToolError("not_found", f"No law with IsraelLawID={israel_law_id}.")
     result = _to_dict(parse_law(raw))
     audit.log(tool="il_get_law", input_hash=input_hash, output_count_or_size=1,
+              duration_ms=t.duration_ms, status="ok")
+    return result
+
+
+# ---------------------------------------------------------------------------
+# il_search_law_texts
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(annotations=READ_ONLY)
+async def il_search_law_texts(query: str, limit: int = 20) -> dict:
+    """Search published Israeli law versions (KNS_Law), including consolidated texts.
+
+    Complements `il_search_laws`: that tool covers the KNS_IsraelLaw registry
+    (validity status, Basic Law flag), this one covers KNS_Law - the published
+    versions whose official PDF documents are reachable via
+    `il_get_law_documents`. The two id spaces are disjoint.
+
+    Args:
+        query: free text in Hebrew, matched against the published version's name.
+        limit: max results (default 20).
+
+    Returns:
+        ``{"total": int, "items": [...]}`` - each item carries ``law_id``,
+        version metadata (type, sub-type such as a consolidated text,
+        publication series) and the citation contract.
+    """
+    audit = _audit()
+    if not query or not query.strip():
+        raise ToolError("invalid_arg", "query must be a non-empty string.")
+    input_hash = hash_input({"query": query, "limit": limit})
+
+    with timer() as t:
+        try:
+            async with KnessetClient(base_url=_base_url()) as client:
+                raw_items = await client.search_published_laws(query, limit)
+        except Exception as exc:
+            audit.log(tool="il_search_law_texts", input_hash=input_hash, output_count_or_size=0,
+                      duration_ms=t.duration_ms if t.duration_ms else 0, status="error",
+                      error=f"{type(exc).__name__}: {exc}")
+            raise _map_upstream(exc) from exc
+
+    items = []
+    for raw in raw_items:
+        law = parse_published_law(raw)
+        citation = build_published_law_citation(law)
+        items.append({**dataclasses.asdict(law), **dataclasses.asdict(citation)})
+    audit.log(tool="il_search_law_texts", input_hash=input_hash, output_count_or_size=len(items),
+              duration_ms=t.duration_ms, status="ok")
+    return {"total": len(items), "items": items}
+
+
+# ---------------------------------------------------------------------------
+# il_get_law_documents
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(annotations=READ_ONLY)
+async def il_get_law_documents(law_id: int) -> dict:
+    """Official document files (PDFs) for one published law version.
+
+    Args:
+        law_id: the KNS_Law id from `il_search_law_texts` (NOT `israel_law_id`).
+
+    Returns:
+        A dict with the published law's metadata + citation contract and
+        ``documents``: a list of official files, each with ``file_path``
+        (a fs.knesset.gov.il PDF URL - the operative text; fetch it client-side),
+        ``group_type_desc`` and ``application_desc``.
+    """
+    audit = _audit()
+    if law_id <= 0:
+        raise ToolError("invalid_arg", f"law_id={law_id} must be positive.")
+    input_hash = hash_input({"law_id": law_id})
+
+    with timer() as t:
+        try:
+            async with KnessetClient(base_url=_base_url()) as client:
+                raw_law = await client.get_published_law(law_id)
+                raw_docs = await client.get_law_documents(law_id)
+        except Exception as exc:
+            audit.log(tool="il_get_law_documents", input_hash=input_hash, output_count_or_size=0,
+                      duration_ms=t.duration_ms if t.duration_ms else 0, status="error",
+                      error=f"{type(exc).__name__}: {exc}")
+            raise _map_upstream(exc) from exc
+
+    if not raw_law or "LawID" not in raw_law:
+        raise ToolError("not_found", f"No published law with LawID={law_id}.")
+    law = parse_published_law(raw_law)
+    citation = build_published_law_citation(law)
+    documents = [dataclasses.asdict(parse_law_document(d)) for d in raw_docs]
+    result = {
+        **dataclasses.asdict(law),
+        **dataclasses.asdict(citation),
+        "documents": documents,
+        "total_documents": len(documents),
+    }
+    audit.log(tool="il_get_law_documents", input_hash=input_hash,
+              output_count_or_size=len(documents),
               duration_ms=t.duration_ms, status="ok")
     return result
 

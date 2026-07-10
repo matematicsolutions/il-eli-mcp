@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import Citation, Law
+from .models import Citation, Law, LawDocument, PublishedLaw
 
 _ENTITY_URL = "https://knesset.gov.il/Odata/ParliamentInfo.svc/KNS_IsraelLaw({israel_law_id})"
+_PUBLISHED_LAW_URL = "https://knesset.gov.il/Odata/ParliamentInfo.svc/KNS_Law({law_id})"
 
 # Case-law dataset has no official public URL per judgment (it is a static,
 # locally-cached HF dataset, not a live portal) - we point to the dataset
@@ -36,6 +37,41 @@ def parse_law(raw: dict[str, Any]) -> Law:
 def build_citation(law: Law) -> Citation:
     url = _ENTITY_URL.format(israel_law_id=law.israel_law_id)
     human = law.name or f"IsraelLawID {law.israel_law_id}"
+    return Citation(lex_uri=url, human_readable_citation=human, source_url=url)
+
+
+def parse_published_law(raw: dict[str, Any]) -> PublishedLaw:
+    return PublishedLaw(
+        law_id=raw["LawID"],
+        name=raw.get("Name"),
+        type_desc=raw.get("TypeDesc"),
+        sub_type_desc=raw.get("SubTypeDesc"),
+        knesset_num=raw.get("KnessetNum"),
+        publication_date=raw.get("PublicationDate"),
+        publication_series_desc=raw.get("PublicationSeriesDesc"),
+        magazine_number=raw.get("MagazineNumber"),
+    )
+
+
+def parse_law_document(raw: dict[str, Any]) -> LawDocument:
+    return LawDocument(
+        document_law_id=str(raw.get("DocumentLawID", "")),
+        law_id=raw["LawID"],
+        group_type_desc=raw.get("GroupTypeDesc"),
+        application_desc=raw.get("ApplicationDesc"),
+        file_path=raw.get("FilePath"),
+        last_updated_date=raw.get("LastUpdatedDate"),
+    )
+
+
+def build_published_law_citation(law: PublishedLaw) -> Citation:
+    """Citation for a KNS_Law row.
+
+    ``lex_uri`` is the dereferenceable OData entity URL; ``source_url`` prefers
+    the same (the official PDF lives one hop away via ``il_get_law_documents``).
+    """
+    url = _PUBLISHED_LAW_URL.format(law_id=law.law_id)
+    human = law.name or f"LawID {law.law_id}"
     return Citation(lex_uri=url, human_readable_citation=human, source_url=url)
 
 
