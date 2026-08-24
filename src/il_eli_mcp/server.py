@@ -49,6 +49,7 @@ This MCP server exposes the Knesset's official OData API (KNS_IsraelLaw entity s
 
 ## Hard constraints
 
+- **Do not answer past the edge of this corpus** - when a search comes back empty, or the question touches material this connector does not carry, call `il_coverage` and relay what it says is missing. Absence here is not absence in the law.
 - **Hebrew text** - law names and case text are in Hebrew; search queries should be in Hebrew too.
 - **Two disjoint legislation id spaces** - `israel_law_id` (KNS_IsraelLaw registry: status, Basic Law flag) and `law_id` (KNS_Law: published versions with documents). The Knesset exposes no reliable general join between them (KNS_IsraelLawBinding covers replacement events only) - to reach a law's text, search BOTH `il_search_laws` (status) and `il_search_law_texts` (documents) by name.
 - **Law texts arrive as PDF links, not inline text** - `il_get_law_documents` returns official fs.knesset.gov.il PDF URLs; fetching and reading the PDF is the client's job. No Supreme Court coverage in the case-law corpus (lower and specialized courts only).
