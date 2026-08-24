@@ -31,6 +31,7 @@ consolidated texts), and 10,558 Hebrew court judgments.
 | `il_get_law_documents` | Official PDF documents for a published law (fs.knesset.gov.il) |
 | `il_search_case_law` | Keyword search over the local corpus of 10,558 judgments |
 | `il_get_case` | One judgment's full text by `judgment_id` |
+| `il_coverage` | Declare what this connector covers, when each family was captured, and - explicitly - what it does NOT cover. Every gap carries a fallback. |
 
 Every response carries `lex_uri`, `source_url` and `human_readable_citation`
 (the Hebrew name) - Israel has no separate public citation identifier

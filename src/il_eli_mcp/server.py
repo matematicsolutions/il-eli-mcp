@@ -33,6 +33,7 @@ from .citations import (
 )
 from . import runtime
 from .client import DEFAULT_BASE_URL, KnessetClient
+from .coverage import Coverage, build_coverage
 
 INSTRUCTIONS = """\
 This MCP server exposes the Knesset's official OData API (KNS_IsraelLaw entity set) - the record of Israeli primary legislation, including its in-force/repealed status and whether it is a Basic Law (Israel's quasi-constitutional laws).
@@ -348,6 +349,20 @@ async def il_search_case_law(query: str, court: str | None = None, limit: int = 
 
 # ---------------------------------------------------------------------------
 # il_get_case
+@mcp.tool(annotations=READ_ONLY)
+async def il_coverage() -> Coverage:
+    """Declare what this connector covers, how it is sourced, and what it does NOT cover.
+
+    Call this before telling a user that the law "does not contain" something, and whenever
+    a search comes back empty: the absence may be a gap in this connector rather than in the
+    law. Every gap carries a fallback saying where to look instead.
+
+    Returns:
+        ``Coverage`` with families, an as-of note, and a non-empty list of known gaps.
+    """
+    return build_coverage()
+
+
 # ---------------------------------------------------------------------------
 
 
