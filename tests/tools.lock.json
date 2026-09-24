@@ -1,0 +1,366 @@
+{
+  "package_version": "0.5.3",
+  "tools": {
+    "il_coverage": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Declare what this connector covers, how it is sourced, and what it does NOT cover.\n\nCall this before telling a user that the law \"does not contain\" something, and whenever\na search comes back empty: the absence may be a gap in this connector rather than in the\nlaw. Every gap carries a fallback saying where to look instead.\n\nReturns:\n    ``Coverage`` with families, an as-of note, and a non-empty list of known gaps.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_coverage",
+        "outputSchema": {
+          "additionalProperties": true,
+          "description": "What this connector covers, how it is sourced, and what it does not cover.",
+          "properties": {
+            "as_of_note": {
+              "description": "States what the dates mean, and what they do not promise.",
+              "type": "string"
+            },
+            "families": {
+              "items": {
+                "additionalProperties": true,
+                "description": "One data family this connector exposes.",
+                "properties": {
+                  "captured_at": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "description": "Date this family was last captured (ISO). None when queried live."
+                  },
+                  "live": {
+                    "default": true,
+                    "description": "True when queried live instead of from a snapshot.",
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Data family, e.g. 'Federal legislation'.",
+                    "type": "string"
+                  },
+                  "source": {
+                    "description": "Official source the data comes from.",
+                    "type": "string"
+                  },
+                  "tool": {
+                    "description": "Tool or tools that reach this family.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "tool",
+                  "source"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "known_gaps": {
+              "description": "Never empty. An empty list would mean 'not checked', not 'no gaps'.",
+              "items": {
+                "additionalProperties": true,
+                "description": "A known, named hole in this connector's coverage - plus the way around it.",
+                "properties": {
+                  "fallback": {
+                    "description": "Where to go instead.",
+                    "type": "string"
+                  },
+                  "family": {
+                    "description": "Which family the gap belongs to.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "Stable gap identifier.",
+                    "type": "string"
+                  },
+                  "missing": {
+                    "description": "What is NOT available through this connector.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "family",
+                  "missing",
+                  "fallback"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "status": {
+              "default": "ok",
+              "enum": [
+                "ok",
+                "degraded",
+                "failed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "as_of_note"
+          ],
+          "type": "object"
+        }
+      },
+      "sha256": "7f36f7ad65834e7d26e18dc7e8ab0b9fb5c58243a3fe3dca3e0d7f68e9c290ac"
+    },
+    "il_get_case": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Fetch full detail (including full judgment text) for one case by its judgment_id.\n\nReads from the same locally-cached dataset as `il_search_case_law` - see\nthat tool's docstring for the download/caching/license notes.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "judgment_id": {
+              "description": "the dataset's ``judgment_id`` (from `il_search_case_law` results).",
+              "type": "string"
+            }
+          },
+          "required": [
+            "judgment_id"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_get_case",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "5ceb151889a86d2c23802f1790ab0119a35f87eafeeec1dd8457ee39322d8758"
+    },
+    "il_get_law": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Fetch full detail for one Israeli law by its IsraelLawID.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "israel_law_id": {
+              "description": "the Knesset OData IsraelLawID (from `il_search_laws`).",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "israel_law_id"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_get_law",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "8d3a95fd1345d368ec27df1502e3b9ce77863a97195b401c4323885d2712f290"
+    },
+    "il_get_law_documents": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Official document files (PDFs) for one published law version.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "law_id": {
+              "description": "the KNS_Law id from `il_search_law_texts` (NOT `israel_law_id`).",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "law_id"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_get_law_documents",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "d1ffa0676c0bfae15eda0e2782035e24971d627c2b0cf2f0efa0f776198e6e02"
+    },
+    "il_search_case_law": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Keyword search over a local, pre-downloaded corpus of Israeli court judgments.\n\nNOT a live API call. The corpus (10,558 Hebrew judgments from Family,\nDistrict, Magistrate, Labor, Military and Administrative courts) is a\nstatic HuggingFace dataset (`guychuk/case-law-israel`) downloaded once\nand cached locally on first use of this tool - later calls only touch\nthe local cache. Its license is undocumented; treat results as for\nanalysis, not for redistribution.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "court": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "optional substring filter on the court type label (Hebrew), e.g. a\nfragment of \"בית משפט השלום\" (Magistrate) or \"בית דין לעבודה\" (Labor)."
+            },
+            "limit": {
+              "default": 20,
+              "description": "max results (default 20).",
+              "type": "integer"
+            },
+            "query": {
+              "description": "free text in Hebrew, matched against title/full text/judges/case number.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_search_case_law",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "a6e7214e9f9d614a7a9567d884bc0e53223d4e173d5fd521dec2cd12cbfa9253"
+    },
+    "il_search_law_texts": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Search published Israeli law versions (KNS_Law), including consolidated texts.\n\nComplements `il_search_laws`: that tool covers the KNS_IsraelLaw registry\n(validity status, Basic Law flag), this one covers KNS_Law - the published\nversions whose official PDF documents are reachable via\n`il_get_law_documents`. The two id spaces are disjoint.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "default": 20,
+              "description": "max results (default 20).",
+              "type": "integer"
+            },
+            "query": {
+              "description": "free text in Hebrew, matched against the published version's name.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_search_law_texts",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "560c4c14aedbd26612b72a69573d2a4781c624fd41c24e03d35708df1675ab74"
+    },
+    "il_search_laws": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Full-text search over Israeli law names (Hebrew).",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "default": 20,
+              "description": "max results (default 20).",
+              "type": "integer"
+            },
+            "query": {
+              "description": "free text in Hebrew, e.g. a keyword from the law's title.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "il_search_laws",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "1283e607544816a3aa6dbda303196ed8590defda166b531049848579d36733aa"
+    }
+  },
+  "toolset_sha256": "ba9811caeaa7cd3d8d806901ec2a0b231eae91083479c0e7f698ec9c31c96e7a"
+}
