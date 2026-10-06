@@ -74,6 +74,7 @@ without reinstalling Windows.
 | `IL_ELI_CACHE_DIR` | `~/.matematic/cache/il-eli` |
 | `IL_ELI_AUDIT_DIR` | `~/.matematic/audit` |
 | `IL_ELI_BASE_URL` | `https://knesset.gov.il/Odata/ParliamentInfo.svc` |
+| `IL_ELI_CASE_LAW` | `1`; `0` removes `il_search_case_law` and `il_get_case` (the case-law corpus has an undocumented license, so redistributed builds such as the Claude plugin turn it off) |
 
 ## License
 

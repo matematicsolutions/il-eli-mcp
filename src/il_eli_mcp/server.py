@@ -33,7 +33,7 @@ from .citations import (
 )
 from . import runtime
 from .client import DEFAULT_BASE_URL, KnessetClient
-from .coverage import Coverage, build_coverage
+from .coverage import Coverage, build_coverage, case_law_enabled
 
 INSTRUCTIONS = """\
 This MCP server exposes the Knesset's official OData API (KNS_IsraelLaw entity set) - the record of Israeli primary legislation, including its in-force/repealed status and whether it is a Basic Law (Israel's quasi-constitutional laws).
@@ -91,7 +91,16 @@ READ_ONLY = ToolAnnotations(
     openWorldHint=True,
 )
 
-mcp: FastMCP = FastMCP(name="il-eli-mcp", instructions=INSTRUCTIONS)
+_CASE_LAW_OFF_NOTE = (
+    "\n\n## This installation\n\nCase law is turned off (IL_ELI_CASE_LAW=0): il_search_case_law and "
+    "il_get_case are not available. Only Knesset legislation is. Tell the user so instead of searching "
+    "for judgments, and point them to the courts' own publications.\n"
+)
+
+mcp: FastMCP = FastMCP(
+    name="il-eli-mcp",
+    instructions=INSTRUCTIONS if case_law_enabled() else INSTRUCTIONS + _CASE_LAW_OFF_NOTE,
+)
 
 
 def _base_url() -> str:
@@ -420,6 +429,13 @@ async def il_get_case(judgment_id: str) -> dict:
     audit.log(tool="il_get_case", input_hash=input_hash, output_count_or_size=1,
               duration_ms=t.duration_ms, status="ok")
     return result
+
+
+# The case-law corpus is a third-party dataset with an undocumented license. Where the
+# connector is redistributed (the Claude directory plugin), IL_ELI_CASE_LAW=0 keeps it out.
+if not case_law_enabled():
+    for _tool in ("il_search_case_law", "il_get_case"):
+        mcp.remove_tool(_tool)
 
 
 def main() -> None:

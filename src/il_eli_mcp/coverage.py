@@ -11,6 +11,7 @@ mean "nobody checked", not "there are no gaps".
 
 from __future__ import annotations
 
+import os
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -67,11 +68,35 @@ _FAMILIES: list[dict] = [{'name': 'Knesset legislation', 'tool': 'il_search_laws
 _GAPS: list[dict] = [{'id': 'IL-001', 'family': 'Case law (local corpus, 10 558 judgments)', 'missing': 'Case law is a STATIC local dataset, not a live query, and its upstream license field is undocumented.', 'fallback': "Verify any judgment against the court's own publication before relying on it."}, {'id': 'IL-002', 'family': 'Knesset legislation', 'missing': "Law texts arrive as PDF links, not inline text - fetching and reading the PDF is the client's job.", 'fallback': 'Open the fs.knesset.gov.il PDF returned by il_get_law_documents.'}, {'id': 'IL-003', 'family': 'Knesset legislation', 'missing': 'Two disjoint id spaces exist (israel_law_id and law_id); an id from one will not resolve in the other.', 'fallback': 'Use the id space matching the tool you are calling.'}]
 
 
+CASE_LAW_FAMILY = "Case law (local corpus, 10 558 judgments)"
+
+_GAP_CASE_LAW_OFF = {
+    "id": "IL-004",
+    "family": "Case law",
+    "missing": (
+        "Case law is turned off in this installation (IL_ELI_CASE_LAW=0): the only corpus this "
+        "connector has is a third-party dataset whose license is undocumented, so it is not shipped "
+        "where the connector is redistributed. Only Knesset legislation is available."
+    ),
+    "fallback": "Search the courts' own publications (Israel Judicial Authority) or a licensed case-law database.",
+}
+
+
+def case_law_enabled() -> bool:
+    """False when IL_ELI_CASE_LAW is 0/false/off/no; the case-law tools are then not registered."""
+    return os.environ.get("IL_ELI_CASE_LAW", "1").strip().lower() not in {"0", "false", "off", "no"}
+
+
 def build_coverage() -> Coverage:
     """Assemble the declared coverage for this connector."""
+    if case_law_enabled():
+        families, gaps = _FAMILIES, _GAPS
+    else:
+        families = [f for f in _FAMILIES if f["name"] != CASE_LAW_FAMILY]
+        gaps = [g for g in _GAPS if g["family"] != CASE_LAW_FAMILY] + [_GAP_CASE_LAW_OFF]
     return Coverage(
         status="ok",
         as_of_note=AS_OF_NOTE,
-        families=[CoverageFamily(source=SOURCE, live=True, **f) for f in _FAMILIES],
-        known_gaps=[CoverageGap(**g) for g in _GAPS],
+        families=[CoverageFamily(source=SOURCE, live=True, **f) for f in families],
+        known_gaps=[CoverageGap(**g) for g in gaps],
     )
