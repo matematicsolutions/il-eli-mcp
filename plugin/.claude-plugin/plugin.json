@@ -1,0 +1,41 @@
+{
+  "name": "il-eli-mcp",
+  "description": "Israeli legislation with verifiable citations, from the Knesset's official OData API: the legislation registry (in force or repealed, Basic Law flag), published law versions including consolidated texts, and links to their official PDF documents. Every answer carries the official Knesset source URL, so a citation can be checked instead of trusted. Queries go only to the Knesset; nothing goes to MateMatic. Hebrew.",
+  "version": "0.5.4",
+  "author": {
+    "name": "Wieslaw Mazur / MateMatic Solutions"
+  },
+  "homepage": "https://matematicsolutions.com/en/boutique/connectors",
+  "repository": "https://github.com/matematicsolutions/il-eli-mcp",
+  "documentationUrl": "https://github.com/matematicsolutions/il-eli-mcp/tree/main/plugin#readme",
+  "supportUrl": "https://github.com/matematicsolutions/il-eli-mcp/issues",
+  "privacyPolicyUrl": "https://github.com/matematicsolutions/il-eli-mcp/tree/main/plugin#data",
+  "termsOfServiceUrl": "https://github.com/matematicsolutions/il-eli-mcp/blob/main/LICENSE",
+  "license": "Apache-2.0",
+  "keywords": [
+    "legal",
+    "israel",
+    "law",
+    "legislation",
+    "knesset",
+    "hebrew",
+    "citations",
+    "mcp"
+  ],
+  "mcpServers": {
+    "il-eli-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--frozen",
+        "--project",
+        "${CLAUDE_PLUGIN_ROOT}/server",
+        "il-eli-mcp"
+      ],
+      "env": {
+        "IL_ELI_RUNTIME_URL": "",
+        "IL_ELI_CASE_LAW": "0"
+      }
+    }
+  }
+}

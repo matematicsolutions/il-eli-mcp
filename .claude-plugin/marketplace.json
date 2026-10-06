@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-plugin-marketplace.json",
+  "name": "il-eli-mcp",
+  "description": "One plugin: Israeli law with verifiable citations.",
+  "owner": {
+    "name": "Wieslaw Mazur / MateMatic Solutions",
+    "url": "https://matematicsolutions.com"
+  },
+  "plugins": [
+    {
+      "name": "il-eli-mcp",
+      "description": "Israeli legislation from the Knesset OData API, with official source links (Hebrew).",
+      "version": "0.5.4",
+      "author": {
+        "name": "Wieslaw Mazur / MateMatic Solutions"
+      },
+      "license": "Apache-2.0",
+      "source": "./plugin"
+    }
+  ]
+}
